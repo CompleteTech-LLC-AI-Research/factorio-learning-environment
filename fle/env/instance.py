@@ -244,7 +244,7 @@ class FactorioInstance:
         self.initialise(fast, all_technologies_researched, clear_entities)
         self.initial_score = 0
         try:
-            self.first_namespace.score()
+            self.first_namespace._score()
             # print("Initial score:", self.initial_score)
         except Exception:
             # print(e)
@@ -259,7 +259,7 @@ class FactorioInstance:
                 ns._freeze_protected_names()
             self.initialise(fast, all_technologies_researched, clear_entities)
 
-        self.initial_score, _ = self.first_namespace.score()
+        self.initial_score, _ = self.first_namespace._score()
         # Register the cleanup method to be called on exit (only once per process)
         if not FactorioInstance._cleanup_registered:
             atexit.register(self.cleanup)
@@ -344,7 +344,7 @@ class FactorioInstance:
         self.game_control.reset_to_defaults()
 
         try:
-            self.initial_score, _ = self.first_namespace.score()
+            self.initial_score, _ = self.first_namespace._score()
         except Exception:
             self.initial_score = 0
 

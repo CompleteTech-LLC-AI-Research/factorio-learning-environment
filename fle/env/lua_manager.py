@@ -259,6 +259,10 @@ class LuaScriptManager:
                             tool_name.lower(), callable_instance
                         )
 
+                        # Keep harness scoring independent of agent variables.
+                        if tool_name == "score":
+                            instance.namespaces[i]._score = wrapped_instance
+
                         # Store the controller and add it to namespace
                         instance.controllers[tool_name.lower()] = callable_instance
 

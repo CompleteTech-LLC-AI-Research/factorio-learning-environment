@@ -463,7 +463,7 @@ class FactorioGymEnv(gym.Env):
             )
             terminated = task_success.success
 
-        production_score, automated_production_score = namespace.score()
+        production_score, automated_production_score = namespace._score()
         if not automated_production_score:
             automated_production_score = 0
         # Calculate reward
@@ -544,7 +544,7 @@ class FactorioGymEnv(gym.Env):
         game_state = options.get("game_state")
         self.reset_instance(game_state)
 
-        self.initial_score, _ = self.instance.namespaces[0].score()
+        self.initial_score, _ = self.instance.namespaces[0]._score()
         self.last_observation = None  # Reset last observation
         # Reset message timestamps
         self.last_message_timestamps = {i: 0.0 for i in range(self.instance.num_agents)}
