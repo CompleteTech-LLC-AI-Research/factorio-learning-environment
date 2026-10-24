@@ -1,5 +1,7 @@
 import os
+import json
 import time
+from pathlib import Path
 from itertools import product
 from typing import Any, List, Dict, Optional, Tuple
 
@@ -295,6 +297,10 @@ class GymTrajectoryRunner:
 
                     # Check if done and exit if configured
                     if done:
+                        result_log = os.getenv("FLE_BENCH_RESULT_LOG")
+                        if result_log:
+                            with Path(result_log).open("a") as log:
+                                log.write(json.dumps({"trial": os.getenv("FLE_BENCH_TRIAL"), "passed": True, "steps": agent_steps[agent_idx]}) + "\n")
                         completion_result = CompletionResult(
                             step=agent_steps[agent_idx], reason=CompletionReason.SUCCESS
                         )
@@ -307,3 +313,8 @@ class GymTrajectoryRunner:
                     f"Error in trajectory runner iteration {agent_steps[agent_idx]}: {e}"
                 )
                 continue
+
+        result_log = os.getenv("FLE_BENCH_RESULT_LOG")
+        if result_log:
+            with Path(result_log).open("a") as log:
+                log.write(json.dumps({"trial": os.getenv("FLE_BENCH_TRIAL"), "passed": False, "steps": max(agent_steps)}) + "\n")

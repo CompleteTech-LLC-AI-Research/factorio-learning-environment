@@ -1,8 +1,12 @@
 import os
 import logging
+import json
+import sys
+from pathlib import Path
+from datetime import datetime, timezone
 
-from openai import AsyncOpenAI
-from tenacity import retry, wait_exponential
+from openai import AsyncOpenAI, BadRequestError
+from tenacity import retry, wait_exponential, retry_if_not_exception_type
 
 from fle.agents.llm.metrics import timing_tracker, track_timing_async
 from fle.agents.llm.utils import (
@@ -172,7 +176,7 @@ class APIFactory:
                 )
 
     @track_timing_async("llm_api_call")
-    @retry(wait=wait_exponential(multiplier=2, min=2, max=15))
+    @retry(wait=wait_exponential(multiplier=2, min=2, max=15), retry=retry_if_not_exception_type(BadRequestError))
     async def acall(self, **kwargs):
         model_to_use = kwargs.get("model", self.model)
         messages = kwargs.get("messages", [])
@@ -189,7 +193,15 @@ class APIFactory:
         messages = merge_contiguous_messages(messages)
 
         # Get API key with rotation
-        api_key = self._get_api_key(provider_config)
+        gateway_url = os.getenv("FLE_GATEWAY_BASE_URL")
+        if gateway_url and "deepseek" in model_to_use:
+            key_file = os.getenv("FLE_GATEWAY_KEY_FILE")
+            if not key_file:
+                raise ValueError("FLE_GATEWAY_KEY_FILE is required for gateway inference")
+            api_key = json.loads(Path(key_file).read_text())["key"]
+            provider_config = {**provider_config, "base_url": gateway_url}
+        else:
+            api_key = self._get_api_key(provider_config)
 
         # Create client
         client = AsyncOpenAI(
@@ -212,9 +224,25 @@ class APIFactory:
                 "frequency_penalty": kwargs.get("frequency_penalty"),
                 "stream": False,
             }
+            api_params = {name: value for name, value in api_params.items() if value is not None}
 
             # Standard API call for all providers
             response = await client.chat.completions.create(**api_params)
+            usage_path = os.getenv("FLE_BENCH_USAGE_LOG")
+            if gateway_url and usage_path and response.usage:
+                usage = response.usage
+                record = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "trial": os.getenv("FLE_BENCH_TRIAL"),
+                    "model": response.model,
+                    "prompt_tokens": usage.prompt_tokens,
+                    "completion_tokens": usage.completion_tokens,
+                    "total_tokens": usage.total_tokens,
+                    "completion_tokens_details": usage.completion_tokens_details.model_dump() if usage.completion_tokens_details else None,
+                    "prompt_tokens_details": usage.prompt_tokens_details.model_dump() if usage.prompt_tokens_details else None,
+                }
+                with open(usage_path, "a", encoding="utf-8") as log:
+                    log.write(json.dumps(record) + "\n")
             # Mark key as successful
             self._mark_key_result(provider_config, api_key, success=True)
 
@@ -232,6 +260,8 @@ class APIFactory:
             return response
 
         except Exception as e:
+            if isinstance(e, BadRequestError):
+                print(f"Gateway request rejected: {e.message}", file=sys.stderr)
             # Mark key as having an error
             self._mark_key_result(provider_config, api_key, success=False, error=e)
             # Re-raise the exception to trigger retry mechanism
