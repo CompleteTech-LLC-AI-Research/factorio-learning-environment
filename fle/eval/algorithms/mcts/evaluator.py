@@ -190,7 +190,7 @@ class Evaluator:
             start_entities = instance.namespace.get_entities()
             start_inventory = instance.namespace.inspect_inventory()
             start_production_flows = instance.namespace._get_production_stats()
-            initial_value, _ = instance.namespace.score()
+            initial_value, _ = instance.namespace._score()
 
             # Executing code
             self.logger.update_instance(tcp_port, status="executing")
@@ -246,7 +246,7 @@ class Evaluator:
                 result += f"('Current inventory: {final_inventory}',)\n"
                 result += f"('Entities on the map after the current step: {entities}',)"
 
-            score, _ = instance.namespace.score()
+            score, _ = instance.namespace._score()
             final_reward = score - initial_value
             ticks = instance.get_elapsed_ticks()
 

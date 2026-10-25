@@ -235,7 +235,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._send_json(obs_dict)
 
     def _handle_score(self):
-        score, automated = _instance.namespaces[0].score()
+        score, automated = _instance.namespaces[0]._score()
         self._send_json(
             {
                 "production_score": score,

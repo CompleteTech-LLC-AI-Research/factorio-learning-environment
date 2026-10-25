@@ -1169,7 +1169,7 @@ class FactorioNamespace:
                 if isinstance(value, SerializableFunction):
                     eval_dict[key] = value.bind(self)
 
-        score, automated_score = self.score()
+        score, automated_score = self._score()
         result_output = parse_result_into_str(self.logging_results)
 
         # if had_error:

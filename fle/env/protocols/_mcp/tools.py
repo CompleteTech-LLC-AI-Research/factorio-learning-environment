@@ -71,7 +71,7 @@ async def execute(code: str) -> str:
         game_state_data = {
             "inventory": instance.namespace.inspect_inventory(),
             "entities": instance.namespace.get_entities(radius=100),
-            "score": instance.namespace.score(),
+            "score": instance.namespace._score(),
             "game_tick": instance.namespace.game_info.tick,
             "position": instance.namespace.player_location,
             "production_stats": instance.namespace.get_production_stats(),
