@@ -71,3 +71,17 @@ def test_internal_score_matches_public_tool_before_shadowing(scoring_namespaces)
     for namespace in namespaces:
         assert namespace._score is namespace.score
         assert namespace._score() == namespace.score()
+
+
+def test_bridge_score_survives_public_alias(scoring_namespaces, monkeypatch):
+    from fle.eval.inspect.sandbox import bridge_service
+
+    namespaces, _ = scoring_namespaces
+    namespaces[0].eval_with_timeout("from math import pi as score")
+    monkeypatch.setattr(
+        bridge_service, "_instance", SimpleNamespace(namespaces=namespaces)
+    )
+    responses = []
+    handler = SimpleNamespace(_send_json=responses.append)
+    bridge_service.BridgeHandler._handle_score(handler)
+    assert responses == [{"production_score": 100, "automated_production_score": 20}]
